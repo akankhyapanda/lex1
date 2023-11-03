@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AWS Lex Chatbot</title>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <input type="text" id="user-input" placeholder="Type message...">
+        <button id="send-button">Send</button>
+    </div>
+     
+    <video id="video-player" width="360" height="280" controls>
+        <source src="" type="video/mp4">
+    </video>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.1136.0/aws-sdk.min.js"></script>
+    <script>
+        // AWS configuration
+        AWS.config.update({
+            accessKeyId: 'AKIASMD4MJZ5YCIFDTAM',
+            secretAccessKey:  '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',
+            region: 'us-east-1' 
+        });
+
+        // Lex runtime service object
+        var lexRuntime = new AWS.LexRuntime({ apiVersion: '2016-11-28' });
+
+        // Function to send user input to Lex
+        function sendMessageToLex() {
+            var userInput = document.getElementById('user-input').value;
+            document.getElementById('chat-messages').innerHTML += '<div>User: ' + userInput + '</div>';
+
+            var params = {
+                botAlias: 'Order', 
+                botName: 'OrderFlowers_enIN', 
+                inputText: userInput,
+                userId: 'GWQ2ULSQLD',
+                sessionAttributes: {}
+            };
+
+            lexRuntime.postText(params, function (err, data) {
+                if (err) {
+                    console.log(err, err.stack);
+                } else {
+                    var responseText = data.message;
+                    document.getElementById('chat-messages').innerHTML += '<div>Bot: ' + responseText + '</div>';
+                    
+                    // Make a request to the video API
+                   
+                    var myHeaders = new Headers();
+                    myHeaders.append("Content-Type", "application/json");
+
+                    var raw = JSON.stringify({
+                            "data": [
+                                    responseText,
+                                    "J4g7Bv9Tm0A3Q6yZ"
+                            ]
+                    });
+
+                    var requestOptions = {
+                        method: 'POST',
+                        headers: myHeaders,
+                        body: raw,
+                        redirect: 'follow'
+                    };
+
+                    response=fetch("https://leftattention-sample-api-for-t2v.hf.space/run/predict", requestOptions)
+                        .then(response => response.text())
+                        .then(result =>{
+                            // Parse JSON data
+                            data = JSON.parse(result);
+                            url = data.data[0];
+                            console.log(url);
+                        })
+                        .catch(error => console.log('error', error));
+
+                        playVideo();                
+                }
+            });
+        }
+
+        // Function to play the video
+        function playVideo() {
+            var videoPlayer = document.getElementById('video-player');
+             
+            videoPlayer.src = url; // Set video source URL
+            videoPlayer.play();
+        }
+        // Event listener for the "Send" button
+        document.getElementById('send-button').addEventListener('click', sendMessageToLex);
+    </script>
+</body>
+</html>
